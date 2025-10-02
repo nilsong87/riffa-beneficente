@@ -59,12 +59,19 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.value = value;
         });
 
+        const functions = firebase.functions();
+        const createUserProfile = functions.httpsCallable('createUserProfile');
+
         // Cadastro
         registerForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
             // Validação de Idade
             const dobString = document.getElementById('register-dob').value;
+            if (!dobString) {
+                alert('Por favor, preencha sua data de nascimento.');
+                return;
+            }
             const dob = new Date(dobString);
             const today = new Date();
             let age = today.getFullYear() - dob.getFullYear();
@@ -80,34 +87,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Coleta dos dados do formulário
             const name = document.getElementById('register-name').value;
-            const cpf = cpfInput.value;
-            const phone = phoneInput.value;
-            const cep = cepInput.value;
+            const cpf = document.getElementById('register-cpf').value;
+            const phone = document.getElementById('register-phone').value;
+            const cep = document.getElementById('register-cep').value;
             const address = document.getElementById('register-address').value;
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
 
+            // 1. Cria o usuário no serviço de Autenticação
             auth.createUserWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    // Salva todos os dados do usuário no Firestore
-                    return db.collection('users').doc(userCredential.user.uid).set({
-                        name: name,
-                        email: email,
-                        cpf: cpf,
-                        dob: dobString,
-                        phone: phone,
-                        cep: cep,
-                        address: address,
-                        uid: userCredential.user.uid
-                    });
-                })
                 .then(() => {
+                    // 2. Se a criação no Auth deu certo, chama a Cloud Function para salvar os dados
+                    const profileData = { name, email, cpf, dob: dobString, phone, cep, address };
+                    return createUserProfile(profileData);
+                })
+                .then(result => {
+                    // 3. A Cloud Function retornou sucesso
+                    alert(result.data.message); // Exibe a mensagem de sucesso da função
                     registerForm.reset();
                     registerModal.hide();
-                    alert('Cadastro realizado com sucesso!');
                 })
                 .catch(error => {
-                    console.error('Erro no cadastro:', error);
+                    // Trata erros tanto da criação do auth quanto da cloud function
+                    console.error("Erro no processo de cadastro:", error);
                     alert(`Erro: ${error.message}`);
                 });
         });
@@ -177,13 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        buyButton.addEventListener('click', () => {
-            selectedNumbersList.textContent = selectedNumbers.join(', ');
-            totalPrice.textContent = `R$ ${(selectedNumbers.length * numberPrice).toFixed(2)}`;
-            paymentModal.show();
-        });
-
-        confirmPaymentButton.addEventListener('click', async () => {
+        // Listener do botão "Comprar"
+        buyButton.addEventListener('click', async () => {
             const user = auth.currentUser;
             if (!user) return alert('Sessão expirada. Faça login novamente.');
 
@@ -191,25 +188,66 @@ document.addEventListener('DOMContentLoaded', () => {
             const userName = userDoc.data().name;
 
             try {
+                // Transação para reservar os números como "pending"
                 await db.runTransaction(async (transaction) => {
-                    const numbersToUpdate = [];
+                    const numbersToReserve = [];
                     for (const number of selectedNumbers) {
                         const numberRef = db.collection('numbers').doc(number);
                         const doc = await transaction.get(numberRef);
                         if (doc.data().status !== 'available') {
                             throw `O número ${number} não está mais disponível!`;
                         }
-                        numbersToUpdate.push(numberRef);
+                        numbersToReserve.push(numberRef);
                     }
 
-                    numbersToUpdate.forEach(ref => {
+                    numbersToReserve.forEach(ref => {
                         transaction.update(ref, {
-                            status: 'sold',
+                            status: 'pending',
                             ownerId: user.uid,
                             ownerName: userName,
-                            ownerEmail: user.email
+                            ownerEmail: user.email,
+                            reservedAt: firebase.firestore.FieldValue.serverTimestamp(),
                         });
                     });
+                });
+
+                // Se a transação foi bem-sucedida, abre o modal de pagamento
+                selectedNumbersList.textContent = selectedNumbers.join(', ');
+                totalPrice.textContent = `R$ ${(selectedNumbers.length * numberPrice).toFixed(2)}`;
+                paymentModal.show();
+
+            } catch (error) {
+                console.error("Erro ao reservar os números: ", error);
+                alert(error);
+                // Des-seleciona os números na UI se a reserva falhar
+                selectedNumbers.forEach(num => {
+                    const el = numbersGrid.querySelector(`[data-number="${num}"]`);
+                    if (el) el.classList.replace('selected', 'available');
+                });
+                selectedNumbers = [];
+                buyButtonContainer.classList.add('d-none');
+            }
+        });
+
+        // Listener do botão de confirmação de pagamento (simulado)
+        confirmPaymentButton.addEventListener('click', async () => {
+            const user = auth.currentUser;
+            if (!user) return alert('Sessão expirada. Faça login novamente.');
+
+            try {
+                // Transação para mudar os números de "pending" para "sold"
+                await db.runTransaction(async (transaction) => {
+                    for (const number of selectedNumbers) {
+                        const numberRef = db.collection('numbers').doc(number);
+                        const doc = await transaction.get(numberRef);
+                        const data = doc.data();
+
+                        // Verifica se o número ainda está pendente para este usuário
+                        if (data.status !== 'pending' || data.ownerId !== user.uid) {
+                            throw `O número ${number} não está mais reservado para você.`;
+                        }
+                        transaction.update(numberRef, { status: 'sold' });
+                    }
                 });
 
                 alert('Pagamento confirmado! Boa sorte!');
@@ -218,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 paymentModal.hide();
 
             } catch (error) {
-                console.error("Erro na transação: ", error);
+                console.error("Erro na confirmação do pagamento: ", error);
                 alert(error);
             }
         });
@@ -280,7 +318,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     status: 'available', // available, pending, sold
                     ownerId: null,
                     ownerName: null,
-                    ownerEmail: null
+                    ownerEmail: null,
+                    reservedAt: null
                 });
             }
             batch.commit()
