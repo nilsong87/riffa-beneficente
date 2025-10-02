@@ -11,6 +11,7 @@
     --available-color: #50e3c2;
     --pending-color: #f7b731;
     --selected-color: #4a90e2;
+    --selected-hover-color: #357ABD;
 }
 
 body {
