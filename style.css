@@ -19,6 +19,14 @@ body {
     font-family: 'Poppins', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* --- General Layout --- */
+main {
+    flex-grow: 1;
 }
 
 /* --- Navbar & Header --- */
