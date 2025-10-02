@@ -9,6 +9,21 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 /**
+ * Valida um número de CPF.
+ * @param {string} cpf O CPF para validar.
+ * @return {boolean} True se o CPF for válido, false caso contrário.
+ */
+function isValidCPF(cpf) {
+  if (typeof cpf !== "string") return false;
+  cpf = cpf.replace(/[^\d]+/g, "");
+  if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
+  cpf = cpf.split("").map((el) => +el);
+  const rest = (count) => (cpf.slice(0, count - 12)
+      .reduce((soma, el, index) => (soma + el * (count - index)), 0) * 10) % 11 % 10;
+  return rest(10) === cpf[9] && rest(11) === cpf[10];
+}
+
+/**
  * Exemplo de Função HTTP: pode ser chamada por uma URL.
  * Responde com uma mensagem de boas-vindas.
  */
@@ -37,8 +52,13 @@ exports.createUserProfile = onCall(async (request) => {
   const {name, email, cpf, dob, phone, cep, address} = request.data;
   const uid = request.auth.uid;
 
-  // TODO: Adicionar validação de dados do lado do servidor aqui.
-  // Por exemplo: verificar se o formato do CPF é válido.
+  // Validação do CPF no backend
+  if (!isValidCPF(cpf)) {
+    throw new HttpsError(
+        "invalid-argument",
+        "O CPF informado não é válido.",
+    );
+  }
 
   // Salva os dados no Firestore usando os privilégios de administrador.
   try {
