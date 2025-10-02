@@ -402,4 +402,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        // --- LÓGICA DO FORMULÁRIO DE CONTATO ---
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+            const functions = firebase.functions();
+            const sendContactMessage = functions.httpsCallable('sendContactMessage');
+            const formAlert = document.getElementById('form-alert');
+            const submitButton = document.getElementById('contact-submit-btn');
+
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                submitButton.disabled = true;
+                submitButton.textContent = 'Enviando...';
+
+                const name = document.getElementById('contact-name').value;
+                const email = document.getElementById('contact-email').value;
+                const message = document.getElementById('contact-message').value;
+
+                sendContactMessage({ name, email, message })
+                    .then(result => {
+                        formAlert.className = 'alert alert-success';
+                        formAlert.textContent = result.data.message;
+                        formAlert.classList.remove('d-none');
+                        contactForm.reset();
+                    })
+                    .catch(error => {
+                        formAlert.className = 'alert alert-danger';
+                        formAlert.textContent = `Erro: ${error.message}`;
+                        formAlert.classList.remove('d-none');
+                    })
+                    .finally(() => {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Enviar Mensagem';
+                    });
+            });
+        }
 });

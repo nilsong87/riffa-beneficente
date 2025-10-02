@@ -17,14 +17,25 @@
         <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="#">🐾 Rifa Beneficente</a>
-            <div id="auth-links" class="ms-auto">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">Entrar</button>
-                <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#registerModal">Cadastrar</button>
-            </div>
-            <div id="user-info" class="d-none text-white">
-                <span id="user-email"></span>
-                <button id="logout-button" class="btn btn-danger ms-2">Sair</button>
+            <a class="navbar-brand" href="index.html">🐾 Rifa Beneficente</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link active" href="index.html">Início</a></li>
+                    <li class="nav-item"><a class="nav-link" href="sobre.html">Sobre Nós</a></li>
+                    <li class="nav-item"><a class="nav-link" href="contato.html">Contato</a></li>
+                    <li class="nav-item"><a class="nav-link" href="fale-conosco.html">Fale Conosco</a></li>
+                </ul>
+                <div id="auth-links" class="ms-auto">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">Entrar</button>
+                    <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#registerModal">Cadastrar</button>
+                </div>
+                <div id="user-info" class="d-none text-white ms-auto">
+                    <span id="user-email"></span>
+                    <button id="logout-button" class="btn btn-danger ms-2">Sair</button>
+                </div>
             </div>
         </div>
     </nav>

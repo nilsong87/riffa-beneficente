@@ -109,3 +109,48 @@ exports.releaseExpiredReservations = onSchedule("every 1 hours", async (event) =
   );
   return null;
 });
+
+/**
+ * Recebe uma mensagem do formulário 'Fale Conosco' e a registra.
+ */
+exports.sendContactMessage = onCall(async (request) => {
+  const {name, email, message} = request.data;
+
+  // Validação simples dos dados
+  if (!name || !email || !message) {
+    throw new HttpsError(
+        "invalid-argument",
+        "Todos os campos são obrigatórios.",
+    );
+  }
+
+  logger.info(`Nova mensagem de contato de ${name} (${email}): ${message}`);
+
+  // TODO: Implementar o envio de e-mail real.
+  // Para enviar e-mails a partir de uma Cloud Function, você precisará de um
+  // serviço de terceiros, como SendGrid, Mailgun ou Resend.
+  //
+  // Exemplo usando Nodemailer com um serviço SMTP:
+  // 1. Instale o Nodemailer: npm install nodemailer
+  // 2. Configure o 'transporter' com as credenciais do seu provedor de e-mail.
+  // 3. Use o transporter para enviar o e-mail.
+  //
+  // const nodemailer = require('nodemailer');
+  // const transporter = nodemailer.createTransport({
+  //   service: 'gmail', // ou outro serviço
+  //   auth: {
+  //     user: 'seu-email@gmail.com',
+  //     pass: 'sua-senha-de-app' // Use senhas de app para o Gmail
+  //   }
+  // });
+  //
+  // await transporter.sendMail({
+  //   from: `"${name}" <${email}>`,
+  //   to: 'email-da-ong@example.com', // O e-mail da sua ONG
+  //   subject: 'Nova Mensagem do Site',
+  //   text: message,
+  //   html: `<b>De:</b> ${name}<br><b>Email:</b> ${email}<br><b>Mensagem:</b><p>${message}</p>`
+  // });
+
+  return {success: true, message: "Mensagem enviada com sucesso!"};
+});
